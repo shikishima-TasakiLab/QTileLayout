@@ -1,0 +1,133 @@
+name: Build Matrix
+
+on: 
+  push:
+    paths-ignore:
+      - '.gitignore'
+      - '*.md'
+
+env:
+  QT_VERSION: 6.8.0
+
+jobs:
+  build:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {
+            name: "Windows Latest x64",
+            artifact: "Windows-x64",
+            os: windows-latest,
+            qt_install_host: windows,
+            qt_install_arch: win64_mingw,
+            qt_install_tools: 'tools_mingw1310'
+          }
+          - {
+            name: "Linux Latest x64",
+            artifact: "Linux-x64",
+            os: ubuntu-latest,
+            qt_install_host: linux,
+            qt_install_arch: linux_gcc_64,
+            qt_install_tools:
+          }
+          - {
+            name: "macOS Latest x64",
+            artifact: "macOS-x64",
+            os: macos-latest,
+            qt_install_host: mac,
+            qt_install_arch: clang_64,
+            qt_install_tools:
+            }
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          path: src
+      
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: ${{ matrix.config.qt_install_host }}
+          target: 'desktop'
+          arch: ${{ matrix.config.qt_install_arch }}
+          dir: '${{ github.workspace }}/local/'
+          install-deps: 'true'
+          modules:
+          cache: 'false'
+          cache-key-prefix: 'install-qt-action'
+          tools: ${{ matrix.config.qt_install_tools }}
+          set-env: 'true'
+          tools-only: 'false'
+          aqtversion: '==3.1.*'
+          py7zrversion: '==0.20.*'
+
+      - name: Build on Windows
+        if: ${{ matrix.config.qt_install_host == 'windows' }}
+        env:
+          QT_VERSION: ${{ env.QT_VERSION }}
+        run: |
+          IF "%QT_VERSION:~0,1%"=="5" ( dir %Qt5_DIR% ) ELSE ( dir %QT_ROOT_DIR%\lib\cmake )
+          cd src
+          cmake -G"MinGW Makefiles" -S . -B ../build
+          cmake --build ../build
+          cmake --install ../build --prefix="${{ github.workspace }}/install"
+        shell: cmd
+
+      - name: Build on Unix
+        if: ${{ matrix.config.qt_install_host != 'windows' }}
+        env:
+          QT_VERSION: ${{ env.QT_VERSION }}
+        run: |
+          if [[ $QT_VERSION == 6* ]]; then
+            ls "${QT_ROOT_DIR}/lib/cmake"
+          else
+            ls "${Qt5_DIR}"
+          fi
+          cd src
+          cmake -S . -B ../build
+          cmake --build ../build
+          cmake --install ../build --prefix="${{ github.workspace }}/install"
+        shell: bash
+      
+      # - name: ls on Windows
+      #   if: ${{ matrix.config.qt_install_host == 'windows' }}
+      #   run: |
+      #     cd ${{ github.workspace }}/src
+      #     dir
+      #     cd ${{ github.workspace }}/build
+      #     dir
+      #     cd ${{ github.workspace }}/install
+      #     dir
+      #     cd ${{ github.workspace }}/install/bin
+      #     dir
+      #   shell: cmd
+
+      # - name: ls on Unix
+      #   if: ${{ matrix.config.qt_install_host != 'windows' }}
+      #   run: |
+      #     echo "${{ github.workspace }}/src"
+      #     cd ${{ github.workspace }}/src
+      #     ls -lh
+      #     echo "${{ github.workspace }}/build"
+      #     cd ${{ github.workspace }}/build
+      #     ls -lh
+      #     echo "${{ github.workspace }}/install"
+      #     cd ${{ github.workspace }}/install
+      #     ls -lh
+      #     if [[ -d ${{ github.workspace }}/install/bin ]]; then
+      #       cd ${{ github.workspace }}/install/bin
+      #       ls -lh
+      #     fi
+      #   shell: bash
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.config.artifact }}
+          path: ${{ github.workspace }}/install/**
+          
