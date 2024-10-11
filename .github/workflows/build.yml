@@ -94,40 +94,34 @@ jobs:
           cmake --install ../build --prefix="${{ github.workspace }}/install"
         shell: bash
       
-      # - name: ls on Windows
-      #   if: ${{ matrix.config.qt_install_host == 'windows' }}
-      #   run: |
-      #     cd ${{ github.workspace }}/src
-      #     dir
-      #     cd ${{ github.workspace }}/build
-      #     dir
-      #     cd ${{ github.workspace }}/install
-      #     dir
-      #     cd ${{ github.workspace }}/install/bin
-      #     dir
-      #   shell: cmd
+      - name: ls on Windows
+        if: ${{ matrix.config.qt_install_host == 'windows' }}
+        run: |
+          cd ${{ github.workspace }}/build
+          dir
+          cd ${{ github.workspace }}/install
+          dir
+          cd ${{ github.workspace }}/install/bin
+          dir
+        shell: cmd
 
-      # - name: ls on Unix
-      #   if: ${{ matrix.config.qt_install_host != 'windows' }}
-      #   run: |
-      #     echo "${{ github.workspace }}/src"
-      #     cd ${{ github.workspace }}/src
-      #     ls -lh
-      #     echo "${{ github.workspace }}/build"
-      #     cd ${{ github.workspace }}/build
-      #     ls -lh
-      #     echo "${{ github.workspace }}/install"
-      #     cd ${{ github.workspace }}/install
-      #     ls -lh
-      #     if [[ -d ${{ github.workspace }}/install/bin ]]; then
-      #       cd ${{ github.workspace }}/install/bin
-      #       ls -lh
-      #     fi
-      #   shell: bash
+      - name: ls on Unix
+        if: ${{ matrix.config.qt_install_host != 'windows' }}
+        run: |
+          echo "${{ github.workspace }}/build"
+          cd ${{ github.workspace }}/build
+          ls -lh
+          echo "${{ github.workspace }}/install"
+          cd ${{ github.workspace }}/install
+          ls -lh
+          if [[ -d ${{ github.workspace }}/install/bin ]]; then
+            cd ${{ github.workspace }}/install/bin
+            ls -lh
+          fi
+        shell: bash
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.config.artifact }}
           path: ${{ github.workspace }}/install/**
-          
